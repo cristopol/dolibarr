@@ -500,7 +500,28 @@ abstract class CommonDocGenerator
 				$resarray['object_total_discount'] = round(100 / $totalUp * $object->getTotalDiscount(), 2);
 				$resarray['object_total_discount_locale'] = price($resarray['object_total_discount'], 0, $outputlangs);
 			}
-		}
+        }
+        
+        //Add vat by each rate
+        if (is_array($object->lines) && count($object->lines)>0)
+        {
+            $totalUp = array(0,0);
+            $decent_array= $this->get_tva_from_object($object->lines); //remise_percent array
+
+            foreach ($object->lines as $line)
+            {
+                foreach ($decent_array as $d_key => $d_item) {
+                    if($line->tva_tx == $d_item) { //if remise_percent equals 13% or 24%
+                        $totalUp[$d_key] += $line->total_ht;
+                    }
+                }
+            }
+
+            foreach ($decent_array as $id => $a_item) {
+                $key = 'object_total_ht_vat_' . $a_item . '_locale';
+                $resarray[$key] = $totalUp[$id];
+            }
+        }
 
 		// Retrieve extrafields
 		if (is_array($object->array_options) && count($object->array_options))
@@ -1118,5 +1139,19 @@ abstract class CommonDocGenerator
             }
         }
         return $this->tabTitleHeight;
+    }
+
+    //Custom function
+
+    function get_tva_from_object($lines) {
+        $arr = array();
+        if(!empty($lines)) {
+            foreach ($lines as $key => $line) {
+                if(!in_array($line->tva_tx, $arr)) {
+                    array_push($arr, $line->tva_tx);
+                }
+            }
+        }
+        return $arr;
     }
 }
